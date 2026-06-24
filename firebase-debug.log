@@ -1,0 +1,97 @@
+[debug] [2026-06-23T16:40:29.754Z] ----------------------------------------------------------------------
+[debug] [2026-06-23T16:40:29.756Z] Command:       /opt/homebrew/Cellar/node/26.3.1/bin/node /opt/homebrew/bin/firebase login:ci
+[debug] [2026-06-23T16:40:29.756Z] CLI Version:   15.22.1
+[debug] [2026-06-23T16:40:29.756Z] Platform:      darwin
+[debug] [2026-06-23T16:40:29.756Z] Node Version:  v26.3.1
+[debug] [2026-06-23T16:40:29.756Z] Detected Agent: unknown
+[debug] [2026-06-23T16:40:29.756Z] Time:          Tue Jun 23 2026 22:10:29 GMT+0530 (India Standard Time)
+[debug] [2026-06-23T16:40:29.756Z] ----------------------------------------------------------------------
+[debug] 
+[warn] ⚠  Authenticating with a `login:ci` token is deprecated and will be removed in a future major version of `firebase-tools`. Instead, use a service account key with `GOOGLE_APPLICATION_CREDENTIALS`: https://cloud.google.com/docs/authentication/getting-started 
+[info] 
+[info] Visit this URL on this device to log in:
+[info] https://accounts.google.com/o/oauth2/auth?client_id=563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com&scope=email%20openid%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloudplatformprojects.readonly%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Ffirebase%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform&response_type=code&state=958886749&redirect_uri=http%3A%2F%2Flocalhost%3A9005
+[info] 
+[info] Waiting for authentication...
+[debug] [2026-06-23T16:40:36.842Z] >>> [apiv2][query] POST https://accounts.google.com/o/oauth2/token [none]
+[debug] [2026-06-23T16:40:36.843Z] >>> [apiv2][body] POST https://accounts.google.com/o/oauth2/token [omitted]
+[debug] [2026-06-23T16:40:37.241Z] Token Fetch Error: FirebaseError: FetchError: Invalid response body while trying to fetch https://accounts.google.com/o/oauth2/token: Premature close
+    at RetryOperation._fn (/opt/homebrew/lib/node_modules/firebase-tools/lib/apiv2.js:317:88)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+[error] Authentication Error: Your credentials are no longer valid. Please run firebase login --reauth
+
+For CI servers and headless environments, generate a new token with firebase login:ci
+[debug] [2026-06-23T16:40:37.248Z] >>> [apiv2][query] POST https://auth.firebase.tools/attest [none]
+[debug] [2026-06-23T16:40:37.248Z] >>> [apiv2][body] POST https://auth.firebase.tools/attest {"session_id":"e705aa72-b1df-4bc0-b5eb-29cea4e41fc5"}
+[debug] [2026-06-23T16:40:37.981Z] <<< [apiv2][status] POST https://auth.firebase.tools/attest 200
+[debug] [2026-06-23T16:40:37.982Z] <<< [apiv2][body] POST https://auth.firebase.tools/attest {"token":"7l19Q3heb2MVNSARqDcyHPKYjMZlWrERIbWua_16yW4"}
+[info] 
+[info] To sign in to the Firebase CLI:
+[info] 
+[info] 1. Take note of your session ID:
+[info] 
+[info]    E705A
+[info] 
+[info] 2. Visit the URL below on any device and follow the instructions to get your code:
+[info] 
+[info]    https://auth.firebase.tools/login?code_challenge=Whd5Y0P-hMRwwITrtAT_jU4KHLTXWb2XAUaT6iywO8k&session=e705aa72-b1df-4bc0-b5eb-29cea4e41fc5&attest=7l19Q3heb2MVNSARqDcyHPKYjMZlWrERIbWua_16yW4
+[info] 
+[info] 3. Paste or enter the authorization code below once you have it:
+[info] 
+[debug] [2026-06-23T16:43:41.802Z] ----------------------------------------------------------------------
+[debug] [2026-06-23T16:43:41.804Z] Command:       /opt/homebrew/Cellar/node/26.3.1/bin/node /opt/homebrew/bin/firebase login
+[debug] [2026-06-23T16:43:41.804Z] CLI Version:   15.22.1
+[debug] [2026-06-23T16:43:41.804Z] Platform:      darwin
+[debug] [2026-06-23T16:43:41.804Z] Node Version:  v26.3.1
+[debug] [2026-06-23T16:43:41.804Z] Detected Agent: unknown
+[debug] [2026-06-23T16:43:41.804Z] Time:          Tue Jun 23 2026 22:13:41 GMT+0530 (India Standard Time)
+[debug] [2026-06-23T16:43:41.804Z] ----------------------------------------------------------------------
+[debug] 
+[info] i  The Firebase CLI’s MCP server feature can optionally make use of Gemini in Firebase. Learn more about Gemini in Firebase and how it uses your data: https://firebase.google.com/docs/gemini-in-firebase#how-gemini-in-firebase-uses-your-data 
+[info] 
+[info] i  Firebase optionally collects CLI and Emulator Suite usage and error reporting information to help improve our products. Data is collected in accordance with Google's privacy policy (https://policies.google.com/privacy) and is not used to identify you. 
+[info] 
+[info] i  To change your preferences at any time, run `firebase logout` and `firebase login` again. 
+[info] 
+[info] Visit this URL on this device to log in:
+[info] https://accounts.google.com/o/oauth2/auth?client_id=563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com&scope=email%20openid%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloudplatformprojects.readonly%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Ffirebase%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform&response_type=code&state=518486473&redirect_uri=http%3A%2F%2Flocalhost%3A9005
+[info] 
+[info] Waiting for authentication...
+[debug] [2026-06-23T16:43:53.434Z] >>> [apiv2][query] POST https://accounts.google.com/o/oauth2/token [none]
+[debug] [2026-06-23T16:43:53.435Z] >>> [apiv2][body] POST https://accounts.google.com/o/oauth2/token [omitted]
+[debug] [2026-06-23T16:43:53.827Z] Token Fetch Error: FirebaseError: FetchError: Invalid response body while trying to fetch https://accounts.google.com/o/oauth2/token: Premature close
+    at RetryOperation._fn (/opt/homebrew/lib/node_modules/firebase-tools/lib/apiv2.js:317:88)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+[error] Authentication Error: Your credentials are no longer valid. Please run firebase login --reauth
+
+For CI servers and headless environments, generate a new token with firebase login:ci
+[debug] [2026-06-23T16:43:53.831Z] >>> [apiv2][query] POST https://auth.firebase.tools/attest [none]
+[debug] [2026-06-23T16:43:53.831Z] >>> [apiv2][body] POST https://auth.firebase.tools/attest {"session_id":"43f27034-3580-4d30-b58f-cfaaa5629fb2"}
+[debug] [2026-06-23T16:43:54.468Z] <<< [apiv2][status] POST https://auth.firebase.tools/attest 200
+[debug] [2026-06-23T16:43:54.468Z] <<< [apiv2][body] POST https://auth.firebase.tools/attest {"token":"VGLbHPl_LJCsAHmMEPn7jGSHE3W9ZZX77Zs1lZpab4A"}
+[info] 
+[info] To sign in to the Firebase CLI:
+[info] 
+[info] 1. Take note of your session ID:
+[info] 
+[info]    43F27
+[info] 
+[info] 2. Visit the URL below on any device and follow the instructions to get your code:
+[info] 
+[info]    https://auth.firebase.tools/login?code_challenge=qRBPrsiBTqwbEuxRwdUhW1QuUg-pTzwpmBj-WcR2YF4&session=43f27034-3580-4d30-b58f-cfaaa5629fb2&attest=VGLbHPl_LJCsAHmMEPn7jGSHE3W9ZZX77Zs1lZpab4A
+[info] 
+[info] 3. Paste or enter the authorization code below once you have it:
+[info] 
+[debug] [2026-06-23T17:04:24.369Z] ExitPromptError: User force closed the prompt with SIGINT
+    at Interface.sigint (/opt/homebrew/lib/node_modules/firebase-tools/node_modules/@inquirer/core/dist/commonjs/lib/create-prompt.js:101:37)
+    at Interface.emit (node:events:509:20)
+    at [_ttyWrite] [as _ttyWrite] (node:internal/readline/interface:1327:18)
+    at ReadStream.onkeypress (node:internal/readline/interface:284:20)
+    at ReadStream.emit (node:events:521:24)
+    at emitKeys (node:internal/readline/utils:371:14)
+    at emitKeys.next (<anonymous>)
+    at ReadStream.onData (node:internal/readline/emitKeypressEvents:64:36)
+    at ReadStream.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+[error] 
+[error] Error: An unexpected error has occurred.

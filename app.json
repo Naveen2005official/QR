@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "QRLoggerApp",
+    "slug": "QRLoggerApp",
+    "version": "1.0.0",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "android": {
+      "package": "com.navi7105cold.QRLoggerApp",
+      "permissions": [
+        "CAMERA",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow QRLoggerApp to access your camera to scan codes."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "d4016f9c-1963-4681-9835-86a837b611b2"
+      }
+    }
+  }
+}

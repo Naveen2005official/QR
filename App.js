@@ -1,21 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Text, View, TextInput, Button, StyleSheet, Alert, ActivityIndicator, FlatList } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc, collection, getDocs, setDoc } from 'firebase/firestore';
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { auth, db, app } from './firebaseConfig'; 
+import { auth, db } from './firebaseConfig'; 
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   
-  // User creation state
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
@@ -30,54 +27,50 @@ export default function App() {
   const checkUserRole = async (uid) => {
     try {
       const userDoc = await getDoc(doc(db, "users", uid));
-      if (userDoc.exists()) {
-        setIsAdmin(userDoc.data().isAdmin || false);
-      }
-    } catch (error) {
-      console.error("Error checking role:", error);
-    }
+      if (userDoc.exists()) setIsAdmin(userDoc.data().isAdmin || false);
+    } catch (error) { console.error("Error checking role:", error); }
   };
 
   const fetchAdminData = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "users"));
-      const usersList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setMembers(usersList);
+      setMembers(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-      const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwQu8YQc9mKGfi_lvmp8h1pKfc0x-fd_eKEwOp8F_b-slPsZTURbNKcQU_utb0og7aW/exec';
-      const response = await fetch(GOOGLE_SCRIPT_URL);
-      const text = await response.text();
-      try {
-        const data = JSON.parse(text);
-        setLogs(Array.isArray(data) ? data : []);
-      } catch (e) {
-        setLogs([]);
-      }
-    } catch (err) {
-      console.error("Error fetching admin data:", err);
-    }
+      const response = await fetch('https://script.google.com/macros/s/AKfycbwQu8YQc9mKGfi_lvmp8h1pKfc0x-fd_eKEwOp8F_b-slPsZTURbNKcQU_utb0og7aW/exec');
+      const data = await response.json();
+      setLogs(Array.isArray(data) ? data : []);
+    } catch (err) { console.error("Error fetching admin data:", err); }
   };
+
+  // Syncing tab selection with data refresh
+  useEffect(() => {
+    if (isAdmin) {
+      fetchAdminData();
+    }
+  }, [adminTab, isAdmin]);
 
   const handleCreateUser = async () => {
     try {
-      // Initialize a temporary secondary auth instance to prevent session takeover
-      const tempApp = initializeApp(app.options, 'tempApp');
-      const tempAuth = getAuth(tempApp);
-      
-      const userCredential = await createUserWithEmailAndPassword(tempAuth, newEmail, newPassword);
-      
-      await setDoc(doc(db, "users", userCredential.user.uid), {
-        email: newEmail,
-        isAdmin: false
+      const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwQu8YQc9mKGfi_lvmp8h1pKfc0x-fd_eKEwOp8F_b-slPsZTURbNKcQU_utb0og7aW/exec';
+      const response = await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          type: "CREATE_USER", 
+          newEmail, 
+          newPassword 
+        }),
       });
       
-      // Clean up secondary instance
-      tempApp.delete();
-      
-      Alert.alert("Success", "User added successfully");
-      setNewEmail('');
-      setNewPassword('');
-      fetchAdminData();
+      const result = await response.json();
+      if(result.status === "success") {
+        Alert.alert("Request Sent", "The user will be created by the system.");
+        setNewEmail('');
+        setNewPassword('');
+        fetchAdminData();
+      } else {
+        throw new Error(result.message);
+      }
     } catch (error) {
       Alert.alert("Error", error.message);
     }
@@ -93,14 +86,10 @@ export default function App() {
     return unsubscribe;
   }, []);
 
-  useEffect(() => {
-    if (isAdmin) fetchAdminData();
-  }, [isAdmin]);
-
   const handleLogin = async () => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (error) { Alert.alert("Error", error.message); }
+      await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+    } catch (error) { Alert.alert("Login Failed", error.message); }
   };
 
   const handleBarCodeScanned = async ({ data }) => {
@@ -115,11 +104,17 @@ export default function App() {
         body: JSON.stringify({ username: user.email, qrData: data, details: "App Scan Entry" }),
       });
       const result = await response.json();
-      if(result.status === "success") Alert.alert("Success!", "Logged to Sheets.");
-      else throw new Error(result.message || "Unknown error");
+      if(result.status === "success") {
+        Alert.alert("Success!", "Logged to Sheets.", [
+          { text: "OK", onPress: () => setScanned(false) }
+        ]);
+      } else {
+        throw new Error(result.message || "Unknown error");
+      }
     } catch (error) { 
-      Alert.alert("Error", error.message); 
-      setScanned(false);
+      Alert.alert("Error", error.message, [
+        { text: "OK", onPress: () => setScanned(false) }
+      ]);
     } finally { setIsSubmitting(false); }
   };
 
@@ -128,9 +123,9 @@ export default function App() {
   if (!user) {
     return (
       <View style={styles.authContainer}>
-        <Text style={styles.title}>Login</Text>
-        <TextInput style={styles.input} placeholder="Email" value={email} onChangeText={setEmail} autoCapitalize="none" />
-        <TextInput style={styles.input} placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry />
+        <Text style={styles.title}>Admin Login</Text>
+        <TextInput style={styles.input} placeholder="Email" value={loginEmail} onChangeText={setLoginEmail} autoCapitalize="none" />
+        <TextInput style={styles.input} placeholder="Password" value={loginPassword} onChangeText={setLoginPassword} secureTextEntry />
         <Button title="Login" onPress={handleLogin} />
       </View>
     );
@@ -164,7 +159,14 @@ export default function App() {
     );
   }
 
-  if (!permission) return <View style={styles.centerContainer}><Button onPress={requestPermission} title="Grant Camera Access" /></View>;
+  if (!permission || !permission.granted) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={{marginBottom: 20}}>Camera permission needed.</Text>
+        <Button onPress={requestPermission} title="Grant Access" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.scannerContainer}>

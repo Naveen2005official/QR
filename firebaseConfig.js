@@ -3,6 +3,7 @@ import { initializeAuth, getReactNativePersistence, getAuth } from "firebase/aut
 import { getFirestore } from "firebase/firestore";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native'; // Import Platform to detect Web vs App
+import { getDoc, doc } from "firebase/firestore"; // Import these
 
 const firebaseConfig = {
   apiKey: "AIzaSyBAh9rvzMIhMDdoLCv5GOEZnFjPk_JzE9s",
@@ -27,6 +28,14 @@ if (Platform.OS === 'web') {
     persistence: getReactNativePersistence(AsyncStorage)
   });
 }
+
+const checkUserRole = async (uid) => {
+  const userDoc = await getDoc(doc(db, "users", uid));
+  if (userDoc.exists() && userDoc.data().isAdmin) {
+    return true; // Is Admin
+  }
+  return false; // Is Normal User
+};
 
 const db = getFirestore(app);
 

@@ -1,255 +1,191 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View, TextInput, Button, StyleSheet, Alert, ActivityIndicator } from 'react-native';
-// UPDATED: Import the new CameraView component for SDK 51
-import { Camera, CameraView } from 'expo-camera';
+import { Text, View, TextInput, Button, StyleSheet, Alert, ActivityIndicator, FlatList } from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { auth } from './firebaseConfig'; 
+import { doc, getDoc, collection, getDocs, setDoc } from 'firebase/firestore';
+import { initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { auth, db, app } from './firebaseConfig'; 
 
 export default function App() {
-  // --- STATE MANAGEMENT ---
   const [user, setUser] = useState(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   
-  // Login State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoginMode, setIsLoginMode] = useState(true);
+  
+  // User creation state
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
 
-  // Camera State
-  const [hasPermission, setHasPermission] = useState(null);
+  const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // --- AUTHENTICATION LISTENER ---
+  const [adminTab, setAdminTab] = useState('Members');
+  const [members, setMembers] = useState([]);
+  const [logs, setLogs] = useState([]);
+
+  const checkUserRole = async (uid) => {
+    try {
+      const userDoc = await getDoc(doc(db, "users", uid));
+      if (userDoc.exists()) {
+        setIsAdmin(userDoc.data().isAdmin || false);
+      }
+    } catch (error) {
+      console.error("Error checking role:", error);
+    }
+  };
+
+  const fetchAdminData = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "users"));
+      const usersList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setMembers(usersList);
+
+      const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwQu8YQc9mKGfi_lvmp8h1pKfc0x-fd_eKEwOp8F_b-slPsZTURbNKcQU_utb0og7aW/exec';
+      const response = await fetch(GOOGLE_SCRIPT_URL);
+      const text = await response.text();
+      try {
+        const data = JSON.parse(text);
+        setLogs(Array.isArray(data) ? data : []);
+      } catch (e) {
+        setLogs([]);
+      }
+    } catch (err) {
+      console.error("Error fetching admin data:", err);
+    }
+  };
+
+  const handleCreateUser = async () => {
+    try {
+      // Initialize a temporary secondary auth instance to prevent session takeover
+      const tempApp = initializeApp(app.options, 'tempApp');
+      const tempAuth = getAuth(tempApp);
+      
+      const userCredential = await createUserWithEmailAndPassword(tempAuth, newEmail, newPassword);
+      
+      await setDoc(doc(db, "users", userCredential.user.uid), {
+        email: newEmail,
+        isAdmin: false
+      });
+      
+      // Clean up secondary instance
+      tempApp.delete();
+      
+      Alert.alert("Success", "User added successfully");
+      setNewEmail('');
+      setNewPassword('');
+      fetchAdminData();
+    } catch (error) {
+      Alert.alert("Error", error.message);
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      if (currentUser) checkUserRole(currentUser.uid);
+      else setIsAdmin(false);
       setLoadingAuth(false);
     });
     return unsubscribe;
   }, []);
 
-  // --- CAMERA PERMISSIONS ---
   useEffect(() => {
-    if (user) {
-      (async () => {
-        const { status } = await Camera.requestCameraPermissionsAsync();
-        setHasPermission(status === 'granted');
-      })();
-    }
-  }, [user]);
+    if (isAdmin) fetchAdminData();
+  }, [isAdmin]);
 
-  // --- AUTHENTICATION HANDLERS ---
-  const handleAuth = async () => {
-    if (!email || !password) {
-      Alert.alert("Error", "Please enter both email and password.");
-      return;
-    }
-    
+  const handleLogin = async () => {
     try {
-      if (isLoginMode) {
-        await signInWithEmailAndPassword(auth, email, password);
-      } else {
-        await createUserWithEmailAndPassword(auth, email, password);
-        Alert.alert("Success", "Account created! You are now logged in.");
-      }
-    } catch (error) {
-      Alert.alert("Authentication Error", error.message);
-    }
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) { Alert.alert("Error", error.message); }
   };
 
-  const handleLogout = async () => {
-    await signOut(auth);
-  };
-
-  // --- QR SCANNER HANDLER ---
-  const handleBarCodeScanned = async ({ type, data }) => {
+  const handleBarCodeScanned = async ({ data }) => {
     if (isSubmitting) return; 
-    
     setScanned(true);
     setIsSubmitting(true);
-    
     try {
-      const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwDtnzOfoFhnp1JAXn6gC4moV9EeuPdSj31tfliia7DdM2K6c4lekVGEyCUPB21kRrE/exec';
-      
+      const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwQu8YQc9mKGfi_lvmp8h1pKfc0x-fd_eKEwOp8F_b-slPsZTURbNKcQU_utb0og7aW/exec';
       const response = await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: user.email,
-          qrData: data,
-          details: "App Scan Entry"
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: user.email, qrData: data, details: "App Scan Entry" }),
       });
-      
       const result = await response.json();
-      
-      if(result.status === "success") {
-        Alert.alert(
-          "Success!",
-          "Data logged to Google Sheets successfully.",
-          [{ text: "Scan Another", onPress: () => setScanned(false) }]
-        );
-      } else {
-        Alert.alert("Error", "Failed to log data. Check your Google Script.");
-        setScanned(false);
-      }
-    } catch (error) {
-      Alert.alert("Network Error", `Could not connect to sheets: ${error.message}`);
+      if(result.status === "success") Alert.alert("Success!", "Logged to Sheets.");
+      else throw new Error(result.message || "Unknown error");
+    } catch (error) { 
+      Alert.alert("Error", error.message); 
       setScanned(false);
-    } finally {
-      setIsSubmitting(false);
-    }
+    } finally { setIsSubmitting(false); }
   };
 
-  // --- RENDER UI ---
-  if (loadingAuth) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#0000ff" />
-      </View>
-    );
-  }
+  if (loadingAuth) return <View style={styles.centerContainer}><ActivityIndicator size="large" /></View>;
 
   if (!user) {
     return (
       <View style={styles.authContainer}>
-        <Text style={styles.title}>{isLoginMode ? 'Secure Login' : 'Create Account'}</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-        <View style={styles.buttonContainer}>
-          <Button title={isLoginMode ? "Login" : "Sign Up"} onPress={handleAuth} />
-        </View>
-        <Button 
-          title={isLoginMode ? "Need an account? Sign up" : "Have an account? Login"} 
-          onPress={() => setIsLoginMode(!isLoginMode)} 
-          type="clear"
-        />
+        <Text style={styles.title}>Login</Text>
+        <TextInput style={styles.input} placeholder="Email" value={email} onChangeText={setEmail} autoCapitalize="none" />
+        <TextInput style={styles.input} placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry />
+        <Button title="Login" onPress={handleLogin} />
       </View>
     );
   }
 
-  if (hasPermission === null) {
-    return <View style={styles.centerContainer}><Text>Requesting camera permission...</Text></View>;
+  if (isAdmin) {
+    return (
+      <View style={styles.adminContainer}>
+        <Text style={styles.title}>Admin Portal</Text>
+        <View style={styles.tabBar}>
+          <Button title="Members" onPress={() => setAdminTab('Members')} />
+          <Button title="Logs" onPress={() => setAdminTab('Logs')} />
+          <Button title="Add User" onPress={() => setAdminTab('AddUser')} />
+        </View>
+        
+        {adminTab === 'Members' && (
+          <FlatList data={members} keyExtractor={item => item.id} renderItem={({item}) => <Text style={styles.item}>{item.email}</Text>} />
+        )}
+        {adminTab === 'Logs' && (
+          <FlatList data={logs} keyExtractor={(item, index) => index.toString()} renderItem={({item}) => <Text style={styles.item}>{item[0]} - {item[2]}</Text>} />
+        )}
+        {adminTab === 'AddUser' && (
+          <View style={styles.addUserContainer}>
+            <TextInput style={styles.input} placeholder="New User Email" value={newEmail} onChangeText={setNewEmail} autoCapitalize="none" />
+            <TextInput style={styles.input} placeholder="New User Password" value={newPassword} onChangeText={setNewPassword} secureTextEntry />
+            <Button title="Create User" onPress={handleCreateUser} />
+          </View>
+        )}
+        <Button title="Logout" onPress={() => signOut(auth)} color="red" />
+      </View>
+    );
   }
-  if (hasPermission === false) {
-    return <View style={styles.centerContainer}><Text>No access to camera</Text></View>;
-  }
+
+  if (!permission) return <View style={styles.centerContainer}><Button onPress={requestPermission} title="Grant Camera Access" /></View>;
 
   return (
     <View style={styles.scannerContainer}>
-      {/* UPDATED: Using the new CameraView component */}
-      <CameraView
-        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-        style={StyleSheet.absoluteFillObject}
-      />
-      
+      <CameraView style={StyleSheet.absoluteFillObject} onBarcodeScanned={scanned ? undefined : handleBarCodeScanned} />
       <View style={styles.topBar}>
-        <Text style={styles.userText}>{user.email}</Text>
-        <Button title="Logout" onPress={handleLogout} color="red" />
+        <Text>{user.email}</Text>
+        <Button title="Logout" onPress={() => signOut(auth)} />
       </View>
-
-      {scanned && !isSubmitting && (
-        <View style={styles.scanAgainButton}>
-           <Button title={'Tap to Scan Again'} onPress={() => setScanned(false)} />
-        </View>
-      )}
-
-      {isSubmitting && (
-        <View style={styles.submittingOverlay}>
-          <ActivityIndicator size="large" color="#0000ff" />
-          <Text style={styles.submittingText}>Saving to Sheet...</Text>
-        </View>
-      )}
     </View>
   );
 }
 
-// --- STYLES ---
 const styles = StyleSheet.create({
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  authContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: '#f5f5f5',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  input: {
-    height: 50,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    marginBottom: 15,
-    paddingHorizontal: 15,
-  },
-  buttonContainer: {
-    marginTop: 10,
-    marginBottom: 20,
-  },
-  scannerContainer: { 
-    flex: 1, 
-    flexDirection: 'column', 
-    justifyContent: 'flex-end',
-  },
-  topBar: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    right: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    padding: 10,
-    borderRadius: 8,
-  },
-  userText: {
-    fontWeight: 'bold',
-  },
-  scanAgainButton: {
-    position: 'absolute',
-    bottom: 50,
-    alignSelf: 'center',
-    backgroundColor: 'white',
-    borderRadius: 8,
-  },
-  submittingOverlay: {
-    position: 'absolute',
-    bottom: 50,
-    alignSelf: 'center',
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 8,
-    alignItems: 'center'
-  },
-  submittingText: {
-    marginTop: 10,
-    fontWeight: 'bold'
-  }
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  authContainer: { flex: 1, justifyContent: 'center', padding: 20 },
+  adminContainer: { flex: 1, paddingTop: 60, padding: 20 },
+  scannerContainer: { flex: 1 },
+  tabBar: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20 },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
+  input: { height: 50, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, marginBottom: 15, paddingHorizontal: 15 },
+  topBar: { position: 'absolute', top: 50, left: 20, right: 20, flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#fff', padding: 10, borderRadius: 8 },
+  item: { padding: 15, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  addUserContainer: { padding: 20 }
 });
